@@ -105,14 +105,6 @@
       box-shadow:0 0 0 3px #ffffff33, 0 10px 24px #ffffff18 inset;
     }
 
-    .pin-wrap{display:flex; gap:8px}
-    .toggle{
-      padding:12px; border-radius:14px; border:1px solid var(--line);
-      background:#151a27; color:var(--ink); cursor:pointer;
-    }
-
-    #error-message{color:#ff6b6b; font-weight:700; min-height:1.2em}
-
     .actions{display:flex; gap:10px; margin-top:6px}
     button{
       flex:1; padding:12px 14px; border-radius:14px; cursor:pointer;
@@ -124,8 +116,6 @@
     .secondary{ background:#2c3242; color:#fff }
 
     footer{ text-align:center; margin-top:14px; font-size:.9rem; color:var(--ink-dim) }
-    footer a{ color:var(--ink-dim); text-decoration:none; }
-    footer a:hover{ color:#fff; text-decoration:underline; }
   </style>
 </head>
 <body>
@@ -141,42 +131,26 @@
     </div>
     <p class="sub">Sign in with your username and PIN.</p>
 
-    <form id="login-form" autocomplete="off">
+    <form autocomplete="off">
       <div class="row">
         <label for="usernameInput">Username</label>
-        <input id="usernameInput" type="text" placeholder="e.g. rafaela" required>
+        <input id="usernameInput" type="text" placeholder="e.g. first.last" required>
       </div>
       <div class="row">
         <label for="pinInput">PIN</label>
-        <div class="pin-wrap">
-          <input id="pinInput" type="password" inputmode="numeric" placeholder="****" required style="flex:1">
-          <button type="button" id="togglePin" class="toggle">Show</button>
-        </div>
+        <input id="pinInput" type="password" inputmode="numeric" placeholder="****" required>
       </div>
 
-      <div id="error-message"></div>
-
       <div class="actions">
-        <button type="submit" class="primary">Sign In</button>
-        <button type="button" class="secondary" onclick="location.href='assignments.html'">Assignments</button>
+        <button type="button" class="primary">Sign In</button>
+        <button type="button" class="secondary">Action</button>
       </div>
     </form>
 
     <footer>
-      <a href="https://www.czm-us.com" target="_blank" rel="noopener noreferrer">WWW.CZM-US.COM</a>
+      © CZM
     </footer>
   </div>
 
-  <script>
-    document.getElementById('togglePin').addEventListener('click', ()=>{
-      const pin = document.getElementById('pinInput');
-      const isText = pin.type === 'text';
-      pin.type = isText ? 'password' : 'text';
-      togglePin.textContent = isText ? 'Show' : 'Hide';
-    });
-  </script>
-  <script src="users.js"></script>
-  <script src="catalog.js"></script>
-  <script src="script.js"></script>
 </body>
 </html>
