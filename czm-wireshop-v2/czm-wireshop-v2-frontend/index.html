@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wireshop • Sign In</title>
+  <link rel="preload" href="OIP.jpg" as="image">
+  <style>
+    :root{
+      --bg-1:#0b0d12;
+      --bg-2:#10141d;
+      --ink:#e9eefc;
+      --ink-dim:#aab3c7;
+      --line:#2c3242;
+      --accent:#c20f2f;         /* CZM red */
+      --radius:22px;
+      --glow-red: rgba(194,15,47,.52);
+      --glow-blue: rgba(91,192,235,.25);
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(900px 600px at 75% 25%, rgba(194,15,47,.16), transparent 60%),
+        radial-gradient(900px 600px at 20% 80%, rgba(91,192,235,.12), transparent 55%),
+        linear-gradient(180deg,var(--bg-2),var(--bg-1));
+      display:grid; place-items:center; padding:24px;
+    }
+
+    .brand{
+      position:fixed; top:18px; left:50%; transform:translateX(-50%);
+      display:flex; align-items:center; gap:14px; opacity:.95; user-select:none;
+    }
+    .brand img{ height:46px; filter:invert(1); }
+
+    .card{
+      position:relative; width:min(460px,96vw);
+      border-radius:var(--radius);
+      padding:30px 26px 26px;
+      background:linear-gradient(180deg,#141925ee,#0f141fdd);
+      border:1px solid #ffffff18;
+      backdrop-filter: blur(14px) saturate(110%);
+      isolation:isolate;
+      box-shadow:
+        0 30px 70px rgba(0,0,0,.65),
+        0 10px 24px rgba(0,0,0,.55),
+        0 0 0 1px rgba(0,0,0,.8),
+        0 0 26px 6px var(--glow-red),
+        0 0 42px 10px var(--glow-blue);
+      animation: glowPulse 4.5s ease-in-out infinite;
+    }
+
+    @keyframes glowPulse{
+      0%,100%{
+        box-shadow:
+          0 30px 70px rgba(0,0,0,.65),
+          0 10px 24px rgba(0,0,0,.55),
+          0 0 0 1px rgba(0,0,0,.8),
+          0 0 22px 5px var(--glow-red),
+          0 0 38px 8px var(--glow-blue);
+      }
+      50%{
+        box-shadow:
+          0 30px 70px rgba(0,0,0,.65),
+          0 10px 24px rgba(0,0,0,.55),
+          0 0 0 1px rgba(0,0,0,.8),
+          0 0 34px 10px var(--glow-red),
+          0 0 58px 14px var(--glow-blue);
+      }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .card{ animation:none }
+    }
+
+    .card::before{
+      content:""; position:absolute; inset:-2px; border-radius:inherit; z-index:-1;
+      background: url('OIP.jpg') center/88% no-repeat;
+      filter: invert(1) opacity(.05);
+    }
+    .card::after{
+      content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none;
+      background: conic-gradient(from 210deg, #ffffff12, #ffffff24 35%, #ffffff10 60%, #ffffff12);
+      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      animation: spin 10s linear infinite;
+    }
+    @keyframes spin{ to{ transform:rotate(360deg) } }
+
+    .logo-row{display:flex; align-items:center; gap:12px; margin-bottom:8px}
+    .logo-row img{height:30px; filter:invert(1)}
+    h1{font-size:1.28rem; margin:0}
+    p.sub{margin:0 0 18px; color:var(--ink-dim)}
+
+    .row{display:flex; flex-direction:column; gap:6px; margin-bottom:14px}
+    label{font-weight:650}
+    input{
+      padding:12px 14px; border-radius:14px; border:1px solid var(--line);
+      background:#0f1320; color:var(--ink); outline:none;
+      transition:border .15s ease, box-shadow .15s ease, transform .06s ease;
+    }
+    input:focus{
+      border-color:#ffffffaa;
+      box-shadow:0 0 0 3px #ffffff33, 0 10px 24px #ffffff18 inset;
+    }
+
+    .pin-wrap{display:flex; gap:8px}
+    .toggle{
+      padding:12px; border-radius:14px; border:1px solid var(--line);
+      background:#151a27; color:var(--ink); cursor:pointer;
+    }
+
+    #error-message{color:#ff6b6b; font-weight:700; min-height:1.2em}
+
+    .actions{display:flex; gap:10px; margin-top:6px}
+    button{
+      flex:1; padding:12px 14px; border-radius:14px; cursor:pointer;
+      font-weight:800; letter-spacing:.2px; border:none;
+      transition:transform .06s ease, filter .15s ease, background .2s ease;
+    }
+    button:active{ transform:translateY(1px) }
+    .primary{ color:#fff; background:linear-gradient(180deg,var(--accent),#8e0b23); box-shadow:0 12px 28px #c20f2f55; }
+    .secondary{ background:#2c3242; color:#fff }
+
+    footer{ text-align:center; margin-top:14px; font-size:.9rem; color:var(--ink-dim) }
+    footer a{ color:var(--ink-dim); text-decoration:none; }
+    footer a:hover{ color:#fff; text-decoration:underline; }
+  </style>
+</head>
+<body>
+
+  <div class="brand">
+    <img src="OIP.jpg" alt="CZM Foundation Equipment">
+  </div>
+
+  <div class="card">
+    <div class="logo-row">
+      <img src="OIP.jpg" alt="CZM">
+      <h1>Wireshop</h1>
+    </div>
+    <p class="sub">Sign in with your username and PIN.</p>
+
+    <form id="login-form" autocomplete="off">
+      <div class="row">
+        <label for="usernameInput">Username</label>
+        <input id="usernameInput" type="text" placeholder="e.g. rafaela" required>
+      </div>
+      <div class="row">
+        <label for="pinInput">PIN</label>
+        <div class="pin-wrap">
+          <input id="pinInput" type="password" inputmode="numeric" placeholder="****" required style="flex:1">
+          <button type="button" id="togglePin" class="toggle">Show</button>
+        </div>
+      </div>
+
+      <div id="error-message"></div>
+
+      <div class="actions">
+        <button type="submit" class="primary">Sign In</button>
+        <button type="button" class="secondary" onclick="location.href='assignments.html'">Assignments</button>
+      </div>
+    </form>
+
+    <footer>
+      <a href="https://www.czm-us.com" target="_blank" rel="noopener noreferrer">WWW.CZM-US.COM</a>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('togglePin').addEventListener('click', ()=>{
+      const pin = document.getElementById('pinInput');
+      const isText = pin.type === 'text';
+      pin.type = isText ? 'password' : 'text';
+      togglePin.textContent = isText ? 'Show' : 'Hide';
+    });
+  </script>
+  <script src="users.js"></script>
+  <script src="catalog.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
