@@ -1,0 +1,85 @@
+*{box-sizing:border-box}
+html,body{height:100%}
+:root{--bg:#0d0f12;--panel:#11151b;--line:#232a35;--ink:#e7eaee;--muted:#b7c0cc;--accent:#e11d48}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:12px;line-height:1.35}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#12161c;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.brand{display:flex;gap:10px;align-items:center}
+.logo{height:24px;filter:invert(1)}
+.appname{font-weight:800;letter-spacing:.5px}
+
+.center-wrap{display:grid;place-items:center;min-height:calc(100vh - 120px);padding:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:16px}
+.card-title{margin:0 0 10px 0;text-align:center}
+.login-card{width:min(420px,92vw)}
+.login-form{display:grid;gap:10px}
+.field{display:grid;gap:6px}
+.field>span{font-size:.725rem;color:var(--muted)}
+.field>input{padding:8px 10px;border-radius:12px;border:1px solid #2b3442;background:#0c1015;color:var(--ink)}
+
+.btn{border:0;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.775rem}
+.btn.primary{background:var(--accent);color:white;box-shadow:0 6px 18px rgba(225,29,72,.35)}
+.btn.primary:active{transform:translateY(1px)}
+.btn.subtle{background:#1a2230;color:#cbd5e1}
+.btn.subtle:hover{background:#1e293b}
+
+.checkbox{display:flex;gap:8px;align-items:center;color:var(--muted)}
+.muted{color:var(--muted);font-size:.725rem}
+
+.footer{display:flex;justify-content:center;padding:16px;color:#cbd5e1}
+.footer a{color:#fff;text-decoration:none}
+
+.page{max-width:1100px;margin:20px auto;padding:0 14px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tools{display:flex;gap:16px;align-items:center;color:var(--muted)}
+.who{color:#cbd5e1}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0}
+.search{flex:1;padding:8px 10px;border-radius:12px;border:1px solid #2b3442;background:#0c1015;color:var(--ink);font-size:.825rem}
+
+.table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}
+.table{width:100%;border-collapse:collapse;font-size:.775rem}
+.table thead th{position:sticky;top:0;background:#0e1319;border-bottom:1px solid var(--line);padding:8px;text-align:left;font-weight:600}
+.table td{padding:8px;border-bottom:1px solid #1b2330}
+
+.w-80{width:80px}
+.w-100{width:100px}
+.w-120{width:120px}
+.w-140{width:140px}
+.w-180{width:180px}
+
+.qty{font-variant-numeric:tabular-nums}
+.adjust{display:flex;align-items:center;gap:10px}
+.adjinput{width:90px;padding:8px 10px;border-radius:8px;border:1px solid #2b3442;background:#0c1015;color:var(--ink);text-align:center}
+.apply{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:6px 12px;cursor:pointer}
+
+.msg{min-height:1.2rem;color:#ef4444;text-align:center}
+.meta{color:var(--muted);margin:8px 0 12px 0}
+
+/* Detail panel */
+.detail-panel{background:#0f141b;border:1px dashed #2a3342;border-radius:10px;padding:12px;margin:6px 0 14px 0}
+.detail-panel > div{margin:4px 0}
+.small{font-size:.675rem}
+
+/* Part-number link style: always white and underlined */
+.plink,
+.plink:visited,
+.plink:hover,
+.plink:active,
+.plink:focus {
+  color:#fff !important;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+
+/* Tighter inventory table + your widths */
+.table{table-layout:fixed}
+.table thead th,.table td{padding:6px 8px}
+.table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.table th:nth-child(1),.table td:nth-child(1){width:75px}   /* Part Number */
+.table th:nth-child(2),.table td:nth-child(2){width:125px}  /* Print Name */
+.table th:nth-child(3),.table td:nth-child(3){width:40px}   /* Location */
+.table th:nth-child(4),.table td:nth-child(4){width:10px;text-align:center} /* Qty */
+.table th:nth-child(5),.table td:nth-child(5){width:45px}   /* Apply (now left of Adjust) */
+.table th:nth-child(6),.table td:nth-child(6){width:110px}  /* Adjust */
+.adjinput{width:75px}

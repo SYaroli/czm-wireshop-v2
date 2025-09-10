@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CZM • Part Details</title>
+  <link href="./styles.css" rel="stylesheet">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="./logo.png" class="logo" alt="CZM">
+      <span class="appname">WireShop</span>
+    </div>
+    <nav class="nav">
+      <button onclick="location.href='inventory.html'" class="btn subtle">Back</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="card">
+      <div class="card-header">
+        <h2 id="title">Inventory</h2>
+      </div>
+
+      <div id="detailPanel" class="detail-panel">
+        <div><strong>Part Number:</strong> <span id="pn"></span></div>
+        <div><strong>Print Name:</strong> <span id="printName"></span></div>
+        <div><strong>Location:</strong> <span id="location"></span></div>
+        <div><strong>Expected Hours:</strong> <span id="expected"></span></div>
+        <div><strong>Notes:</strong> <span id="notes"></span></div>
+        <p class="muted small">If any of this looks wrong, fix the catalog later; inventory will still work.</p>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" id="logTable">
+          <thead>
+            <tr>
+              <th class="w-180">Time</th>
+              <th class="w-120">By</th>
+              <th class="w-80">Δ</th>
+              <th class="w-80">Qty</th>
+            </tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a href="https://www.czm-us.com" target="_blank" rel="noopener">www.czm-us.com</a>
+  </footer>
+
+  <script src="./catalog.js"></script>
+  <script src="./scripts/part.js"></script>
+</body>
+</html>

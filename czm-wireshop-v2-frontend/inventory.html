@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CZM • Inventory</title>
+  <link href="./styles.css" rel="stylesheet">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="./logo.png" class="logo" alt="CZM">
+      <span class="appname">WireShop</span>
+    </div>
+    <nav class="nav">
+      <span id="who" class="who"></span>
+      <button id="logoutBtn" class="btn subtle">Logout</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="card">
+      <div class="card-header">
+        <h2>Inventory — Snapshot</h2>
+        <span id="count" class="muted"></span>
+      </div>
+
+      <div class="toolbar">
+        <input id="filter" class="search" placeholder="part number, print name, or location">
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" id="invTable">
+          <thead>
+            <tr>
+              <th>Part Number</th>
+              <th>Print Name</th>
+              <th>Location</th>
+              <th>Qty</th>
+              <th>Apply</th>
+              <th>Adjust</th>
+            </tr>
+          </thead>
+          <tbody id="invBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a href="https://www.czm-us.com" target="_blank" rel="noopener">www.czm-us.com</a>
+  </footer>
+
+  <script src="./catalog.js"></script>
+  <script src="./scripts/auth.js"></script>
+  <script src="./scripts/inventory.js"></script>
+</body>
+</html>
