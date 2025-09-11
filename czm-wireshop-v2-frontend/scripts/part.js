@@ -1,123 +1,66 @@
-// scripts/part.js — resilient loader that tries multiple API shapes
+// scripts/part.js — load from the full inventory list and pick the matching part
+
 (function () {
   const qs = new URLSearchParams(location.search);
-  const pn = qs.get("pn") || "";
+  const pn = (qs.get("pn") || "").trim();
+
+  // tiny helpers
   const $ = (id) => document.getElementById(id);
   const show = (id, v = true) => ($(id).style.display = v ? "" : "none");
+  const norm = (s) => String(s || "").replace(/[^\w]/g, "").toLowerCase(); // remove dots/spaces etc.
 
-  // Render helpers
-  function setPart(p) {
-    $("title").textContent = `Part • ${pn}`;
-    $("pn").textContent = pn;
-    $("name").textContent =
-      p.printName || p.name || p.print_name || p.description || "(unnamed)";
-    $("loc").textContent = p.location ?? p.loc ?? p.bin ?? "?";
-    $("qty").textContent = p.qty ?? p.quantity ?? p.onhand ?? 0;
-    show("loading", false);
-    show("details", true);
-  }
-  function apiFetch(path, init) {
-    return fetch(path, {
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      ...init,
-    });
-  }
-
-  // Try endpoints until one succeeds
-  async function getPart(pn) {
-    const encoded = encodeURIComponent(pn);
-    const candidates = [
-      `/api/parts/${encoded}`,
-      `/api/part/${encoded}`,
-      `/api/inventory/${encoded}`,
-      `/api/parts?pn=${encoded}`,
-      `/api/part?pn=${encoded}`,
-      `/api/inventory?pn=${encoded}`,
-    ];
-
-    let lastErr = null;
-    for (const url of candidates) {
-      try {
-        const res = await apiFetch(url);
-        if (!res.ok) {
-          lastErr = `${res.status} ${res.statusText} @ ${url}`;
-          continue;
-        }
-        const data = await res.json();
-
-        // Accept object, or array with first matching by pn
-        if (Array.isArray(data)) {
-          const found =
-            data.find(
-              (x) =>
-                String(x.partNumber || x.part || x.pn || x.part_no || "")
-                  .trim()
-                  .toLowerCase() === pn.trim().toLowerCase()
-            ) || data[0];
-          return found || null;
-        }
-        return data || null;
-      } catch (e) {
-        lastErr = `${e.message} @ ${url}`;
-      }
-    }
-    throw new Error(lastErr || "No matching API");
-  }
-
-  async function main() {
+  async function load() {
     if (!pn) {
       show("loading", false);
       $("error").textContent = "Missing part number (?pn=...)";
       show("error", true);
       return;
     }
+    $("title").textContent = `Part • ${pn}`;
+    $("pn").textContent = pn;
 
     try {
-      const part = await getPart(pn);
-      if (!part) throw new Error("Part not found");
-      setPart(part);
+      // your inventory page already works, so this endpoint exists
+      const res = await fetch("/api/inventory", { credentials: "include" });
+      if (!res.ok) throw new Error(`/api/inventory → ${res.status}`);
+      const list = await res.json();
 
-      // Optional adjust handler; will try common endpoints
-      $("apply").onclick = async () => {
-        const delta = parseInt($("adj").value, 10) || 0;
-        const encoded = encodeURIComponent(pn);
-        const adjustCandidates = [
-          `/api/parts/${encoded}/adjust`,
-          `/api/part/${encoded}/adjust`,
-          `/api/inventory/${encoded}/adjust`,
-          `/api/adjust/${encoded}`,
-        ];
-        let ok = false;
-        for (const url of adjustCandidates) {
-          try {
-            const up = await apiFetch(url, {
-              method: "POST",
-              body: JSON.stringify({ delta }),
-            });
-            if (!up.ok) continue;
-            const fresh = await up.json();
-            $("qty").textContent = fresh.qty ?? fresh.newQty ?? fresh.quantity ?? "?";
-            $("adj").value = "0";
-            ok = true;
-            break;
-          } catch {}
-        }
-        if (!ok) {
-          $("error").textContent = "Adjust failed: no handler found";
-          show("error", true);
-        }
-      };
+      // find by any plausible field
+      const key = norm(pn);
+      const item =
+        (list || []).find((x) => {
+          const candidates = [
+            x.partNumber,
+            x.part_number,
+            x.part,
+            x.pn,
+            x.partNo,
+            x.part_no,
+          ];
+          return candidates.some((c) => norm(c) === key);
+        }) || null;
+
+      if (!item) throw new Error("Part not found in inventory list");
+
+      $("name").textContent =
+        item.printName || item.print_name || item.name || "(unnamed)";
+      $("loc").textContent = item.location ?? item.loc ?? "?";
+      $("qty").textContent = item.qty ?? item.quantity ?? 0;
+
+      show("loading", false);
+      show("details", true);
+
+      // Hide adjust for now; we’ll wire it to the exact endpoint later
+      const adjWrap = document.getElementById("adjustWrap");
+      if (adjWrap) adjWrap.style.display = "none";
     } catch (e) {
       show("loading", false);
-      $("title").textContent = `Part • ${pn}`;
-      $("pn").textContent = pn;
       $("error").textContent = `Load failed: ${e.message}`;
       show("error", true);
     }
   }
 
-  // Inject minimal DOM if you’re using this file standalone
+  // minimal DOM bootstrap in case page was the simple shell
   if (!document.getElementById("details")) {
     document.body.innerHTML = `
       <div class="page" style="max-width:980px;margin:40px auto;padding:24px">
@@ -132,15 +75,15 @@
               <div><strong>Location:</strong> <span id="loc"></span></div>
               <div><strong>Qty:</strong> <span id="qty"></span></div>
             </div>
-            <div style="margin-top:16px">
+            <div id="adjustWrap" style="margin-top:16px">
               <label for="adj" style="color:#9aa0a6">Adjust qty:</label>
               <input id="adj" type="number" step="1" value="0" style="width:100px" />
-              <button id="apply">Apply</button>
+              <button id="apply" disabled title="Adjust disabled on this view">Apply</button>
             </div>
           </div>
         </div>
       </div>`;
   }
 
-  main();
+  load();
 })();
