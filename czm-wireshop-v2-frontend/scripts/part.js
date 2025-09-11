@@ -1,34 +1,66 @@
-(function(){
-  const LOG_KEY = "ws.logs";
-  function loadLogs(){ try{return JSON.parse(localStorage.getItem(LOG_KEY) || "{}");}catch{ return {}; } }
-  function qp(name){ const u = new URL(location.href); return u.searchParams.get(name) || ""; }
+// scripts/part.js
+(function () {
+  const qs = new URLSearchParams(window.location.search);
+  const part = qs.get("pn");
 
-  const pn = qp("pn");
-  const item = (window.catalog || []).find(m => m.partNumber === pn) || { partNumber: pn };
+  const el = (id) => document.getElementById(id);
+  const show = (id, v=true) => (el(id).style.display = v ? "" : "none");
 
-  // Title and detail fields
-  document.getElementById("title").textContent = `Inventory — ${item.partNumber || pn}`;
-  document.getElementById("pn").textContent = item.partNumber || pn;
-  document.getElementById("printName").textContent = item.printName || "";
-  document.getElementById("location").textContent = item.location || "";
-  const expected = item.expectedHours ?? item.expected ?? item.expected_time ?? item.hours ?? "";
-  document.getElementById("expected").textContent = expected === "" ? "" : expected;
-  const notes = item.notes ?? item.note ?? "";
-  document.getElementById("notes").textContent = notes;
+  function api(path, init) {
+    // Works with your existing relative fetch setup: '/api/...'
+    return fetch(path, {
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      ...init,
+    });
+  }
 
-  // Logs table
-  const logs = loadLogs()[pn] || [];
-  const body = document.getElementById("logBody");
-  body.innerHTML = "";
-  logs.sort((a,b)=>a.t-b.t).forEach(l => {
-    const tr = document.createElement("tr");
-    const dt = new Date(l.t);
-    tr.innerHTML = `
-      <td>${dt.toLocaleString()}</td>
-      <td>${(l.by || "").split(".")[0]}</td>
-      <td>${l.d > 0 ? "+"+l.d : l.d}</td>
-      <td>${l.qty}</td>
-    `;
-    body.appendChild(tr);
-  });
+  async function load() {
+    if (!part) {
+      show("loading", false);
+      el("error").textContent = "Missing part number (?pn=...)";
+      show("error", true);
+      return;
+    }
+    el("title").textContent = `Part • ${part}`;
+    el("pn").textContent = part;
+
+    try {
+      // Adjust this endpoint only if your backend differs
+      const res = await api(`/api/parts/${encodeURIComponent(part)}`);
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const data = await res.json();
+      const item = data || {};
+      el("name").textContent = item.printName || item.name || "(unnamed)";
+      el("loc").textContent = item.location ?? "?";
+      el("qty").textContent = item.qty ?? 0;
+
+      show("loading", false);
+      show("details", true);
+
+      // Hook up adjust button
+      el("apply").onclick = async () => {
+        const delta = parseInt(el("adj").value, 10) || 0;
+        try {
+          const up = await api(`/api/parts/${encodeURIComponent(part)}/adjust`, {
+            method: "POST",
+            body: JSON.stringify({ delta }),
+          });
+          if (!up.ok) throw new Error(`Adjust ${up.status}`);
+          const fresh = await up.json();
+          el("qty").textContent = fresh.qty ?? fresh.newQty ?? "?";
+          el("adj").value = "0";
+        } catch (e) {
+          el("error").textContent = `Adjust failed: ${e.message}`;
+          show("error", true);
+        }
+      };
+    } catch (e) {
+      show("loading", false);
+      el("error").textContent = `Load failed: ${e.message}`;
+      show("error", true);
+    }
+  }
+
+  load();
 })();
