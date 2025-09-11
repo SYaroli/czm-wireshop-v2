@@ -1,56 +1,63 @@
-// scripts/part.js — load from the full inventory list and pick the matching part
+// scripts/part.js — robust loader: try /api/parts then /api/inventory, pick the match.
 
 (function () {
   const qs = new URLSearchParams(location.search);
   const pn = (qs.get("pn") || "").trim();
 
-  // tiny helpers
   const $ = (id) => document.getElementById(id);
   const show = (id, v = true) => ($(id).style.display = v ? "" : "none");
-  const norm = (s) => String(s || "").replace(/[^\w]/g, "").toLowerCase(); // remove dots/spaces etc.
+  const norm = (s) => String(s || "").replace(/[^\w]/g, "").toLowerCase(); // strip dots/spaces
+  const key = norm(pn);
+
+  async function getJSON(url) {
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) throw new Error(`${url} → ${res.status}`);
+    return res.json();
+  }
 
   async function load() {
+    $("title") && ($("title").textContent = `Part • ${pn}`);
+    $("pn") && ($("pn").textContent = pn);
+
     if (!pn) {
       show("loading", false);
       $("error").textContent = "Missing part number (?pn=...)";
       show("error", true);
       return;
     }
-    $("title").textContent = `Part • ${pn}`;
-    $("pn").textContent = pn;
 
     try {
-      // your inventory page already works, so this endpoint exists
-      const res = await fetch("/api/inventory", { credentials: "include" });
-      if (!res.ok) throw new Error(`/api/inventory → ${res.status}`);
-      const list = await res.json();
+      // Try canonical lists in order; whichever exists will return 200
+      let list = null, lastErr = null;
+      for (const path of ["/api/parts", "/api/inventory", "/parts", "/inventory"]) {
+        try {
+          list = await getJSON(path);
+          if (Array.isArray(list)) break;
+          list = null;
+        } catch (e) { lastErr = e; }
+      }
+      if (!Array.isArray(list)) throw lastErr || new Error("No list endpoint found");
 
-      // find by any plausible field
-      const key = norm(pn);
       const item =
-        (list || []).find((x) => {
+        list.find((x) => {
           const candidates = [
-            x.partNumber,
-            x.part_number,
-            x.part,
-            x.pn,
-            x.partNo,
-            x.part_no,
+            x.partNumber, x.part_number, x.part, x.pn, x.partNo, x.part_no
           ];
           return candidates.some((c) => norm(c) === key);
         }) || null;
 
-      if (!item) throw new Error("Part not found in inventory list");
+      if (!item) throw new Error("Part not found in list");
 
-      $("name").textContent =
-        item.printName || item.print_name || item.name || "(unnamed)";
-      $("loc").textContent = item.location ?? item.loc ?? "?";
-      $("qty").textContent = item.qty ?? item.quantity ?? 0;
+      // Fill UI
+      $("name") && ($("name").textContent =
+        item.printName || item.print_name || item.name || "(unnamed)");
+      $("loc") && ($("loc").textContent = item.location ?? item.loc ?? "?");
+      $("qty") && ($("qty").textContent = item.qty ?? item.quantity ?? 0);
 
       show("loading", false);
       show("details", true);
 
-      // Hide adjust for now; we’ll wire it to the exact endpoint later
+      // Hide adjust until we wire an exact endpoint
       const adjWrap = document.getElementById("adjustWrap");
       if (adjWrap) adjWrap.style.display = "none";
     } catch (e) {
@@ -60,7 +67,7 @@
     }
   }
 
-  // minimal DOM bootstrap in case page was the simple shell
+  // Minimal DOM shell if page is bare
   if (!document.getElementById("details")) {
     document.body.innerHTML = `
       <div class="page" style="max-width:980px;margin:40px auto;padding:24px">
