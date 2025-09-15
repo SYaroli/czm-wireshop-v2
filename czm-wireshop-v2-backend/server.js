@@ -9,13 +9,22 @@ const partsRoutes = require('./src/routes/parts');
 const inventoryRoutes = require('./src/routes/inventory');
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    'https://www.czm-us-wireshop.com',      // your frontend
+    'https://czm-wireshop-v2-frontend.onrender.com' // direct Render preview if needed
+  ],
+  methods: ['GET','POST','OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
+
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', async (req, res) => {
   try {
     const db = await getDB();
-    db.get(`SELECT COUNT(*) AS users FROM users`, (err, row) => {
+    db.get('SELECT COUNT(*) AS users FROM users', (err, row) => {
       if (err) return res.status(500).json({ ok:false, error: err.message });
       res.json({ ok:true, users: row.users, env:'up' });
     });
