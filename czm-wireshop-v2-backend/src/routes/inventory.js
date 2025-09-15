@@ -4,11 +4,11 @@ const { getDB } = require('../db');
 
 async function ensureSchema(db) {
   db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS inventory (
+    db.run(`CREATE TABLE IF NOT EXISTS inventory(
       pn TEXT PRIMARY KEY,
       qty INTEGER NOT NULL DEFAULT 0
     );`);
-    db.run(`CREATE TABLE IF NOT EXISTS inventory_logs (
+    db.run(`CREATE TABLE IF NOT EXISTS inventory_logs(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       pn TEXT NOT NULL,
       delta INTEGER NOT NULL,
@@ -28,11 +28,10 @@ router.get('/:pn/logs', async (req, res) => {
          FROM inventory_logs
         WHERE pn = ?
         ORDER BY id DESC
-        LIMIT 200`, [pn],
-      (err, rows) => {
-        if (err) return res.status(500).json({ ok:false, error: err.message });
-        res.json({ ok:true, logs: rows });
-      }
+        LIMIT 200`,
+      [pn],
+      (err, rows) => err ? res.status(500).json({ ok:false, error: err.message })
+                         : res.json({ ok:true, logs: rows })
     );
   } catch (e) { res.status(500).json({ ok:false, error: e.message }); }
 });
@@ -47,9 +46,9 @@ router.post('/:pn/adjust', async (req, res) => {
     const db = await getDB();
     await ensureSchema(db);
     db.serialize(() => {
-      db.run(`INSERT INTO inventory_logs (pn, delta, source) VALUES (?,?,?)`, [pn, delta, source]);
       db.run(`INSERT INTO inventory (pn, qty) VALUES (?,0) ON CONFLICT(pn) DO NOTHING`, [pn]);
-      db.run(`UPDATE inventory SET qty = qty + ? WHERE pn = ?`, [delta, pn], function(err){
+      db.run(`UPDATE inventory SET qty = qty + ? WHERE pn = ?`, [delta, pn]);
+      db.run(`INSERT INTO inventory_logs (pn, delta, source) VALUES (?,?,?)`, [pn, delta, source], function (err) {
         if (err) return res.status(500).json({ ok:false, error: err.message });
         db.get(`SELECT qty FROM inventory WHERE pn = ?`, [pn], (e,row)=>{
           if (e) return res.status(500).json({ ok:false, error: e.message });
