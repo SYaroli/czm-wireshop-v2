@@ -1,114 +1,53 @@
-// Part page loader: try API endpoints, then fall back by fetching catalog.js (root or /scripts) as text and eval to get window.catalog.
-(function () {
+(function(){
+  const API = (window.API_BASE || "").replace(/\/+$/,'');
   const qs = new URLSearchParams(location.search);
-  const pnQuery = (qs.get("pn") || "").trim();
+  const pn = (qs.get('pn') || '').trim();
+  const title = document.getElementById('part-title');
+  const alertBox = document.getElementById('part-alert');
+  const view = document.getElementById('part-view');
+  title.textContent = pn ? `Part • ${pn}` : 'Part';
 
-  const titleEl = document.getElementById("part-title");
-  const viewEl = document.getElementById("part-view");
-  const alertEl = document.getElementById("part-alert");
+  const err = m => { alertBox.textContent = m; alertBox.style.display='block'; };
 
-  titleEl.textContent = pnQuery ? `Part • ${pnQuery}` : "Part";
+  const get = (u)=> fetch(u).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
+  const post = (u,b)=> fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
 
-  function showError(msg) {
-    alertEl.textContent = msg;
-    alertEl.style.display = "block";
-  }
-
-  const getPN = r => (
-    r?.pn ?? r?.part_number ?? r?.["Part Number"] ?? r?.PartNumber ?? r?.partNumber ?? ""
-  ).toString().trim();
-
-  const getPrintName = r => (
-    r?.print_name ?? r?.["Print Name"] ?? r?.printName ?? r?.PrintName ?? ""
-  ).toString().trim();
-
-  const getLocation = r => (
-    r?.location ?? r?.["Location"] ?? r?.bin ?? r?.["Bin"] ?? ""
-  ).toString().trim();
-
-  const getQty = r => {
-    const v = r?.qty ?? r?.quantity ?? r?.["Qty"] ?? r?.["Quantity"] ?? 0;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  async function tryJson(url) {
-    const res = await fetch(url, { credentials: "omit" });
-    if (!res.ok) throw Object.assign(new Error(`${res.status}`), { status: res.status });
-    return res.json();
-  }
-
-  async function loadFromApi() {
-    const base = (window.API_BASE || "").replace(/\/+$/, "");
-    const urls = [];
-    if (base) urls.push(`${base}/api/parts`, `${base}/api/inventory`);
-    urls.push("/api/parts", "/api/inventory", "/parts", "/inventory");
-
-    let lastErr = null;
-    for (const u of urls) {
-      try {
-        const data = await tryJson(u);
-        if (Array.isArray(data)) return data;
-        if (Array.isArray(data?.items)) return data.items;
-        if (Array.isArray(data?.rows)) return data.rows;
-      } catch (e) {
-        lastErr = e;
-      }
-    }
-    throw lastErr || new Error("no api");
-  }
-
-  async function fetchAndEvalCatalog(url) {
-    const res = await fetch(url + `?v=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`${url} ${res.status}`);
-    const code = await res.text();
-    (function run(win) { eval(code); })(window);   // catalog.js sets window.catalog = [...]
-    if (!Array.isArray(window.catalog)) throw new Error("catalog missing");
-    return window.catalog;
-  }
-
-  async function loadFromCatalogJs() {
-    // Try root first (correct location), then /scripts as a backup
-    try {
-      return await fetchAndEvalCatalog("/catalog.js");
-    } catch (e1) {
-      return await fetchAndEvalCatalog("/scripts/catalog.js");
-    }
-  }
-
-  async function loadList() {
-    try {
-      return await loadFromApi();
-    } catch {
-      return await loadFromCatalogJs();
-    }
-  }
-
-  function renderPart(row) {
-    viewEl.innerHTML = `
+  function render(part){
+    view.innerHTML = `
       <div class="ws-grid ws-grid--2col">
-        <div class="ws-field"><div class="ws-label">Part Number</div><div class="ws-value">${getPN(row)}</div></div>
-        <div class="ws-field"><div class="ws-label">Print Name</div><div class="ws-value">${getPrintName(row) || "—"}</div></div>
-        <div class="ws-field"><div class="ws-label">Location</div><div class="ws-value">${getLocation(row) || "—"}</div></div>
-        <div class="ws-field"><div class="ws-label">Quantity</div><div class="ws-value">${getQty(row)}</div></div>
+        <div class="ws-field"><div class="ws-label">Part Number</div><div class="ws-value">${part.pn}</div></div>
+        <div class="ws-field"><div class="ws-label">Print Name</div><div class="ws-value">${part.name || '—'}</div></div>
+        <div class="ws-field"><div class="ws-label">Location</div><div class="ws-value">${part.location || '—'}</div></div>
+        <div class="ws-field"><div class="ws-label">Expected Hours</div><div class="ws-value">${part.expected_hours ?? 0}</div></div>
+        <div class="ws-field ws-col-2"><div class="ws-label">Notes</div><div class="ws-value">${part.notes || ''}</div></div>
+        <div class="ws-field"><div class="ws-label">Quantity</div>
+          <div class="ws-value" id="qty">${part.qty ?? 0}</div>
+          <div class="ws-actions">
+            <button id="minus" class="ws-btn ws-btn--danger">-</button>
+            <button id="plus" class="ws-btn ws-btn--primary">+</button>
+          </div>
+        </div>
       </div>
+      <div id="logs" class="ws-card" style="margin-top:12px;padding:12px;"></div>
     `;
+    document.getElementById('minus').onclick = async ()=> { const r = await post(`${API}/api/inventory/${encodeURIComponent(pn)}/adjust`, {delta:-1, source:'ui'}); document.getElementById('qty').textContent = r.qty; loadLogs(); };
+    document.getElementById('plus').onclick  = async ()=> { const r = await post(`${API}/api/inventory/${encodeURIComponent(pn)}/adjust`, {delta:+1, source:'ui'}); document.getElementById('qty').textContent = r.qty; loadLogs(); };
   }
 
-  (async function main() {
-    if (!pnQuery) { showError("Missing pn query parameter."); return; }
+  async function loadLogs(){
+    try{
+      const r = await get(`${API}/api/inventory/${encodeURIComponent(pn)}/logs`);
+      const box = document.getElementById('logs');
+      box.innerHTML = `<div class="ws-label" style="margin-bottom:6px;">Recent Inventory Activity</div>` +
+        (r.logs||[]).map(l=>`<div class="ws-row"><span>${l.ts}</span><span>${l.source}</span><span>${l.delta>0?'+':''}${l.delta}</span></div>`).join('');
+    }catch(e){ /* silent */ }
+  }
 
-    try {
-      const list = await loadList();
-      const bare = pnQuery.replace(/\./g, "");
-      const row =
-        list.find(r => getPN(r) === pnQuery) ||
-        list.find(r => getPN(r).replace(/\./g, "") === bare);
-
-      if (!row) { showError(`Part not found in inventory: ${pnQuery}`); return; }
-      renderPart(row);
-    } catch (err) {
-      showError(`Load failed: inventory source unavailable (${err?.status || err?.message || "error"})`);
-    }
+  (async function main(){
+    if(!pn){ err('Missing pn'); return; }
+    try{
+      const r = await get(`${API}/api/parts/${encodeURIComponent(pn)}`);
+      render(r.part); await loadLogs();
+    }catch(e){ err(`Load failed: ${e.message}`); }
   })();
 })();
