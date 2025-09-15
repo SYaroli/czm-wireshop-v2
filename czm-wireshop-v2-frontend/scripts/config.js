@@ -1,6 +1,6 @@
 // scripts/config.js
 // Route relative fetches to the backend and force credentials off (CORS-safe).
-window.API_BASE = "https://czm-wireshop-v2-backend.onrender.com";
+window.API_BASE = "https://czm-us-wireshop.com";
 
 const _fetch = window.fetch.bind(window);
 
@@ -37,3 +37,4 @@ window.fetch = async (input, init = {}) => {
 };
 
 console.log("API_BASE active (no-credentials):", window.API_BASE);
+
