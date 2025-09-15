@@ -10,10 +10,11 @@ const inventoryRoutes = require('./src/routes/inventory');
 
 const app = express();
 
+// CORS: allow your prod site and the Render static preview
 app.use(cors({
   origin: [
-    'https://www.czm-us-wireshop.com',      // your frontend
-    'https://czm-wireshop-v2-frontend.onrender.com' // direct Render preview if needed
+    'https://www.czm-us-wireshop.com',
+    'https://czm-wireshop-v2-frontend.onrender.com'
   ],
   methods: ['GET','POST','OPTIONS'],
   allowedHeaders: ['Content-Type']
@@ -21,12 +22,13 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/health', async (req, res) => {
+// Health
+app.get('/health', async (_req, res) => {
   try {
     const db = await getDB();
     db.get('SELECT COUNT(*) AS users FROM users', (err, row) => {
       if (err) return res.status(500).json({ ok:false, error: err.message });
-      res.json({ ok:true, users: row.users, env:'up' });
+      res.json({ ok:true, users: row?.users ?? 0 });
     });
   } catch (e) {
     res.status(500).json({ ok:false, error: e.message });
