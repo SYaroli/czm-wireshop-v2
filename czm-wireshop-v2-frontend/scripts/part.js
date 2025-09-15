@@ -1,4 +1,4 @@
-// Part page loader: try API endpoints, then fall back by fetching catalog.js as text (MIME-safe) and eval to get window.catalog.
+// Part page loader: try API endpoints, then fall back by fetching catalog.js (root or /scripts) as text and eval to get window.catalog.
 (function () {
   const qs = new URLSearchParams(location.search);
   const pnQuery = (qs.get("pn") || "").trim();
@@ -58,16 +58,22 @@
     throw lastErr || new Error("no api");
   }
 
-  async function loadFromCatalogJs() {
-    // Fetch as text to bypass MIME execution blocking, then eval to define window.catalog
-    const res = await fetch("/scripts/catalog.js", { cache: "no-store" });
-    if (!res.ok) throw new Error(`catalog.js ${res.status}`);
+  async function fetchAndEvalCatalog(url) {
+    const res = await fetch(url + `?v=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`${url} ${res.status}`);
     const code = await res.text();
-    // Sandboxed-ish eval: attach catalog to window
-    (function run(win) { eval(code); })(window); // catalog.js in your repo defines window.catalog = [...]
-    const list = Array.isArray(window.catalog) ? window.catalog : [];
-    if (!list) throw new Error("catalog missing");
-    return list;
+    (function run(win) { eval(code); })(window);   // catalog.js sets window.catalog = [...]
+    if (!Array.isArray(window.catalog)) throw new Error("catalog missing");
+    return window.catalog;
+  }
+
+  async function loadFromCatalogJs() {
+    // Try root first (correct location), then /scripts as a backup
+    try {
+      return await fetchAndEvalCatalog("/catalog.js");
+    } catch (e1) {
+      return await fetchAndEvalCatalog("/scripts/catalog.js");
+    }
   }
 
   async function loadList() {
