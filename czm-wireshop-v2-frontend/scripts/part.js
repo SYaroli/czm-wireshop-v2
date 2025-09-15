@@ -1,143 +1,105 @@
-/* Part details page with resilient data loading.
-   Order: try API endpoints → fall back to window.catalog (from catalog.js). */
-
+// Part page loader: try API endpoints, then fall back by fetching catalog.js as text (MIME-safe) and eval to get window.catalog.
 (function () {
-  const qs = new URLSearchParams(window.location.search);
+  const qs = new URLSearchParams(location.search);
   const pnQuery = (qs.get("pn") || "").trim();
+
   const titleEl = document.getElementById("part-title");
   const viewEl = document.getElementById("part-view");
   const alertEl = document.getElementById("part-alert");
 
   titleEl.textContent = pnQuery ? `Part • ${pnQuery}` : "Part";
 
-  // Utility: show an error nicely
   function showError(msg) {
     alertEl.textContent = msg;
     alertEl.style.display = "block";
   }
 
-  // Normalize part-number field across different shapes
-  function getPN(row) {
-    return (
-      row?.pn ||
-      row?.part_number ||
-      row?.["Part Number"] ||
-      row?.PartNumber ||
-      row?.partNumber ||
-      ""
-    ).toString().trim();
-  }
+  const getPN = r => (
+    r?.pn ?? r?.part_number ?? r?.["Part Number"] ?? r?.PartNumber ?? r?.partNumber ?? ""
+  ).toString().trim();
 
-  function getPrintName(row) {
-    return (
-      row?.print_name ||
-      row?.["Print Name"] ||
-      row?.printName ||
-      row?.PrintName ||
-      ""
-    ).toString().trim();
-  }
+  const getPrintName = r => (
+    r?.print_name ?? r?.["Print Name"] ?? r?.printName ?? r?.PrintName ?? ""
+  ).toString().trim();
 
-  function getLocation(row) {
-    return (
-      row?.location ||
-      row?.["Location"] ||
-      row?.bin ||
-      row?.["Bin"] ||
-      ""
-    ).toString().trim();
-  }
+  const getLocation = r => (
+    r?.location ?? r?.["Location"] ?? r?.bin ?? r?.["Bin"] ?? ""
+  ).toString().trim();
 
-  function getQty(row) {
-    const v =
-      row?.qty ??
-      row?.quantity ??
-      row?.["Qty"] ??
-      row?.["Quantity"] ??
-      0;
+  const getQty = r => {
+    const v = r?.qty ?? r?.quantity ?? r?.["Qty"] ?? r?.["Quantity"] ?? 0;
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
-  }
+  };
 
   async function tryJson(url) {
-    const r = await fetch(url, { credentials: "omit" });
-    if (!r.ok) throw Object.assign(new Error(`${r.status}`), { status: r.status });
-    return r.json();
+    const res = await fetch(url, { credentials: "omit" });
+    if (!res.ok) throw Object.assign(new Error(`${res.status}`), { status: res.status });
+    return res.json();
   }
 
-  async function loadList() {
+  async function loadFromApi() {
     const base = (window.API_BASE || "").replace(/\/+$/, "");
-    const candidates = [];
-
-    // Prefer explicit base if provided in config.js
-    if (base) {
-      candidates.push(`${base}/api/parts`);
-      candidates.push(`${base}/api/inventory`);
-    }
-
-    // Relative fallbacks in case the backend is proxied behind the same origin
-    candidates.push(`/api/parts`);
-    candidates.push(`/api/inventory`);
-    candidates.push(`/parts`);
-    candidates.push(`/inventory`);
+    const urls = [];
+    if (base) urls.push(`${base}/api/parts`, `${base}/api/inventory`);
+    urls.push("/api/parts", "/api/inventory", "/parts", "/inventory");
 
     let lastErr = null;
-    for (const url of candidates) {
+    for (const u of urls) {
       try {
-        const data = await tryJson(url);
-        if (Array.isArray(data) && data.length >= 0) return data;
+        const data = await tryJson(u);
+        if (Array.isArray(data)) return data;
         if (Array.isArray(data?.items)) return data.items;
         if (Array.isArray(data?.rows)) return data.rows;
       } catch (e) {
         lastErr = e;
-        // keep trying
       }
     }
+    throw lastErr || new Error("no api");
+  }
 
-    // Final fallback: static catalog injected via /scripts/catalog.js
-    if (Array.isArray(window.catalog) && window.catalog.length >= 0) {
-      return window.catalog;
+  async function loadFromCatalogJs() {
+    // Fetch as text to bypass MIME execution blocking, then eval to define window.catalog
+    const res = await fetch("/scripts/catalog.js", { cache: "no-store" });
+    if (!res.ok) throw new Error(`catalog.js ${res.status}`);
+    const code = await res.text();
+    // Sandboxed-ish eval: attach catalog to window
+    (function run(win) { eval(code); })(window); // catalog.js in your repo defines window.catalog = [...]
+    const list = Array.isArray(window.catalog) ? window.catalog : [];
+    if (!list) throw new Error("catalog missing");
+    return list;
+  }
+
+  async function loadList() {
+    try {
+      return await loadFromApi();
+    } catch {
+      return await loadFromCatalogJs();
     }
-
-    throw lastErr || new Error("No inventory endpoint available");
   }
 
   function renderPart(row) {
-    viewEl.innerHTML = "";
-
-    const grid = document.createElement("div");
-    grid.className = "ws-grid ws-grid--2col";
-    grid.innerHTML = `
-      <div class="ws-field"><div class="ws-label">Part Number</div><div class="ws-value">${getPN(row)}</div></div>
-      <div class="ws-field"><div class="ws-label">Print Name</div><div class="ws-value">${getPrintName(row) || "—"}</div></div>
-      <div class="ws-field"><div class="ws-label">Location</div><div class="ws-value">${getLocation(row) || "—"}</div></div>
-      <div class="ws-field"><div class="ws-label">Quantity</div><div class="ws-value">${getQty(row)}</div></div>
+    viewEl.innerHTML = `
+      <div class="ws-grid ws-grid--2col">
+        <div class="ws-field"><div class="ws-label">Part Number</div><div class="ws-value">${getPN(row)}</div></div>
+        <div class="ws-field"><div class="ws-label">Print Name</div><div class="ws-value">${getPrintName(row) || "—"}</div></div>
+        <div class="ws-field"><div class="ws-label">Location</div><div class="ws-value">${getLocation(row) || "—"}</div></div>
+        <div class="ws-field"><div class="ws-label">Quantity</div><div class="ws-value">${getQty(row)}</div></div>
+      </div>
     `;
-
-    viewEl.appendChild(grid);
   }
 
   (async function main() {
-    if (!pnQuery) {
-      showError("Missing pn query parameter.");
-      return;
-    }
+    if (!pnQuery) { showError("Missing pn query parameter."); return; }
 
     try {
       const list = await loadList();
-
-      // find the matching row; accept exact and de-dotted comparisons
-      const needle = pnQuery;
-      const bare = needle.replace(/\./g, "");
+      const bare = pnQuery.replace(/\./g, "");
       const row =
-        list.find(r => getPN(r) === needle) ||
+        list.find(r => getPN(r) === pnQuery) ||
         list.find(r => getPN(r).replace(/\./g, "") === bare);
 
-      if (!row) {
-        showError(`Part not found in inventory: ${pnQuery}`);
-        return;
-      }
-
+      if (!row) { showError(`Part not found in inventory: ${pnQuery}`); return; }
       renderPart(row);
     } catch (err) {
       showError(`Load failed: inventory source unavailable (${err?.status || err?.message || "error"})`);
