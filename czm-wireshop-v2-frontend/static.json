@@ -1,5 +1,0 @@
-{
-  "redirects": [
-    { "source": "/inv/(.*)", "destination": "/part.html?pn=$1", "status": 200 }
-  ]
-}
