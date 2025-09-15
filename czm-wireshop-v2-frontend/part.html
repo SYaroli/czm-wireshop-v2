@@ -18,22 +18,12 @@
   <main class="ws-main">
     <section class="ws-card ws-card--xl">
       <h2 id="part-title" class="ws-card__title">Part</h2>
-
       <div id="part-alert" class="ws-alert ws-alert--error" style="display:none;"></div>
-
-      <div id="part-view" class="ws-stack" style="gap:12px;">
-        <!-- Populated by part.js -->
-      </div>
+      <div id="part-view" class="ws-stack" style="gap:12px;"></div>
     </section>
   </main>
 
-  <!-- Config first (defines window.API_BASE if you have it) -->
-  <script src="/scripts/config.js"></script>
-
-  <!-- Fallback catalog so the page still works when API is down -->
-  <script src="/scripts/catalog.js"></script>
-
-  <!-- Page logic -->
-  <script src="/scripts/part.js"></script>
+  <script src="/scripts/config.js" defer></script>
+  <script src="/scripts/part.js" defer></script>
 </body>
 </html>
