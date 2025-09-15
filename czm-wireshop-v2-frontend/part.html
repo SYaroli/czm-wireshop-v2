@@ -1,0 +1,43 @@
+<script src="/scripts/config.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WireShop • Part</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .page { max-width: 980px; margin: 40px auto; padding: 24px; }
+    .card { background:#0f1115; border:1px solid #222; border-radius:14px; padding:20px; }
+    .row { display:flex; gap:16px; flex-wrap:wrap; }
+    .pill { padding:6px 10px; border-radius:999px; border:1px solid #333; }
+    .muted { color:#9aa0a6; }
+    .err { color:#ff7b7b; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h2 id="title">Part</h2>
+    <div id="content" class="card">
+      <div id="loading" class="muted">Loading…</div>
+      <div id="error" class="err" style="display:none"></div>
+      <div id="details" style="display:none">
+        <div class="row">
+          <div class="pill"><strong>Part #:</strong> <span id="pn"></span></div>
+          <div class="pill"><strong>Name:</strong> <span id="name"></span></div>
+          <div class="pill"><strong>Location:</strong> <span id="loc"></span></div>
+          <div class="pill"><strong>Qty:</strong> <span id="qty"></span></div>
+        </div>
+        <div style="margin-top:16px">
+          <label for="adj" class="muted">Adjust qty:</label>
+          <input id="adj" type="number" step="1" value="0" style="width:100px" />
+          <button id="apply">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOT-ABSOLUTE PATHS -->
+  <script src="/scripts/part.js"></script>
+</body>
+</html>
