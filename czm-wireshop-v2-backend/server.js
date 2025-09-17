@@ -1,75 +1,76 @@
-// czm-wireshop-v2-backend/src/server.js
+// czm-wireshop-v2-backend/server.js
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const { getDB } = require('./db');
+
+// ❗ db.js sits in /src now
+const { getDB } = require('./src/db');
 
 const app = express();
-
 app.use(express.json());
 app.use(cookieParser());
 
-// CORS: allow your frontends (comma-separated in CORS_ORIGIN)
-const allowList = (process.env.CORS_ORIGIN || '')
+// CORS — allow your site (and optional extra origins via env)
+const corsOrigin = (process.env.CORS_ORIGIN || 'https://www.czm-us-wireshop.com')
   .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+  .map(s => s.trim());
+app.use(cors({ origin: corsOrigin, credentials: true }));
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true); // curl / same-origin
-      if (allowList.length === 0 || allowList.includes(origin)) return cb(null, true);
-      return cb(new Error(`Blocked by CORS: ${origin}`));
-    },
-    credentials: true,
-  })
-);
-
-// Health
+// Health check: also proves DB opens
 app.get('/health', async (req, res) => {
   try {
     const db = await getDB();
-    db.get('SELECT 1 as ok', (err, row) =>
-      err ? res.status(500).json({ ok: false, error: err.message }) : res.json({ ok: true, users: 1 })
-    );
+    db.get('SELECT COUNT(*) AS users FROM users', [], (err, row) => {
+      if (err) return res.status(500).json({ ok: false, error: err.message });
+      res.json({ ok: true, users: row ? row.users : 0 });
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
 
+// -------- Inventory APIs --------
+
 // All inventory (used by inventory.html)
-app.get('/api/inventory', async (req, res) => {
+app.get('/api/inventory', async (_req, res) => {
   try {
     const db = await getDB();
-    db.all('SELECT pn, qty, updated_at, updated_by FROM inventory ORDER BY pn', (err, rows) =>
-      err ? res.status(500).json({ error: err.message }) : res.json(rows || [])
-    );
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Single part inventory (used by part.html)
-app.get('/api/inventory/:pn', async (req, res) => {
-  const pn = req.params.pn;
-  try {
-    const db = await getDB();
-    db.get('SELECT pn, qty, updated_at, updated_by FROM inventory WHERE pn = ?', [pn], (err, row) => {
+    db.all('SELECT * FROM inventory ORDER BY part_number ASC', [], (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!row) return res.status(404).json({ error: 'not_found' });
-
-      // Try to include recent history if table exists; ignore errors
-      db.all(
-        'SELECT change, qty_after, user AS updated_by, ts FROM inventory_log WHERE pn = ? ORDER BY ts DESC LIMIT 50',
-        [pn],
-        (e2, logs) => res.json({ ...row, history: Array.isArray(logs) ? logs : [] })
-      );
+      res.json(rows);
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`backend listening on ${PORT}`));
+// Single inventory item by PN (useful for part page)
+app.get('/api/inventory/:pn', async (req, res) => {
+  try {
+    const db = await getDB();
+    db.get('SELECT * FROM inventory WHERE part_number = ?', [req.params.pn], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: 'Not found' });
+      res.json(row);
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Optional: catalog/part details (top of part page)
+app.get('/api/parts/:pn', async (req, res) => {
+  try {
+    const db = await getDB();
+    db.get('SELECT * FROM catalog WHERE part_number = ?', [req.params.pn], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: 'Not found' });
+      res.json(row);
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`backend listening on :${PORT}`));
