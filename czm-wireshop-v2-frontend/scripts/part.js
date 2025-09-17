@@ -1,67 +1,75 @@
 // czm-wireshop-v2-frontend/scripts/part.js
-(function(){
-  var API=(window.API_BASE||"https://czm-wireshop-v2-backend.onrender.com").replace(/\/+$/,"");
-  var qs=new URLSearchParams(location.search), pn=(qs.get("pn")||"").trim();
-  var $=function(id){return document.getElementById(id);};
-  var title=$("part-title"), alertBox=$("part-alert"), view=$("part-view");
-  function err(m){alertBox.textContent=m; alertBox.style.display="block";}
-  function normPN(x){return String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");}
-  function jget(u){return fetch(u).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();});}
-  function jpost(u,b){return fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)})
-                       .then(function(r){if(!r.ok)throw new Error(r.status);return r.json();});}
+(() => {
+  const $ = s => document.querySelector(s);
+  const pn = new URLSearchParams(location.search).get('pn')?.trim();
 
-  function findRow(list,pnWanted){
-    var want=normPN(pnWanted);
-    for(var i=0;i<list.length;i++){
-      var r=list[i];
-      var pnKey=r.pn!=null?"pn":(r["Part Number"]!=null?"Part Number":(r.part_number!=null?"part_number":null));
-      if(!pnKey) continue;
-      if(normPN(r[pnKey])===want) return { 
-        pn:r[pnKey],
-        name:r.print_name||r["Print Name"]||r.name||"",
-        location:r.location||r.bin||"",
-        expected_hours:Number(r.expected_hours||0)||0,
-        notes:r.notes||"",
-        qty:Number(r.qty||0)||0
-      };
-    }
-    return null;
+  const title = $('h1') || document.createElement('h1');
+  if (!title.parentNode) document.body.prepend(title);
+  title.textContent = pn ? `Part • ${pn}` : 'Part';
+
+  const statusEl = document.getElementById('status') || (function () {
+    const d = document.createElement('div');
+    d.id = 'status';
+    d.style.margin = '12px';
+    d.style.color = '#f88';
+    document.body.prepend(d);
+    return d;
+  })();
+
+  const setStatus = (msg, color = '#f88') => {
+    statusEl.textContent = msg || '';
+    statusEl.style.color = color;
+  };
+
+  if (!pn) {
+    setStatus('Missing ?pn=…');
+    return;
   }
 
-  function render(p){
-    title.textContent="Part • "+p.pn;
-    view.innerHTML=
-      '<div class="ws-grid ws-grid--2col">'
-      +'<div class="ws-field"><div class="ws-label">Part Number</div><div class="ws-value">'+p.pn+'</div></div>'
-      +'<div class="ws-field"><div class="ws-label">Print Name</div><div class="ws-value">'+(p.name||"—")+'</div></div>'
-      +'<div class="ws-field"><div class="ws-label">Location</div><div class="ws-value">'+(p.location||"—")+'</div></div>'
-      +'<div class="ws-field"><div class="ws-label">Expected Hours</div><div class="ws-value">'+p.expected_hours+'</div></div>'
-      +'<div class="ws-field ws-col-2"><div class="ws-label">Notes</div><div class="ws-value">'+(p.notes||"")+'</div></div>'
-      +'<div class="ws-field"><div class="ws-label">Quantity</div><div class="ws-value" id="qty">'+p.qty
-      +'</div><div class="ws-actions"><button id="minus" class="ws-btn ws-btn--danger">-</button>'
-      +'<button id="plus" class="ws-btn ws-btn--primary">+</button></div></div></div>'
-      +'<div id="logs" class="ws-card" style="margin-top:12px;padding:12px;"></div>';
+  const API_BASE = (window.API_BASE || '').replace(/\/$/, '');
+  const cred = window.API_CREDENTIALS || 'include';
 
-    $("minus").onclick=function(){ jpost(API+'/api/inventory/'+encodeURIComponent(p.pn)+'/adjust',{delta:-1,source:'ui'})
-      .then(function(r){$("qty").textContent=r.qty; loadLogs(p.pn);}).catch(function(e){err("Adjust failed: "+e.message);}); };
-    $("plus").onclick=function(){ jpost(API+'/api/inventory/'+encodeURIComponent(p.pn)+'/adjust',{delta:1,source:'ui'})
-      .then(function(r){$("qty").textContent=r.qty; loadLogs(p.pn);}).catch(function(e){err("Adjust failed: "+e.message);}); };
+  // Try to enrich from catalog.js if present
+  const CATALOG = window.CATALOG || {};
+  const meta = CATALOG[pn] || null;
+  if (meta) {
+    const nameEl = $('#part-name'); if (nameEl) nameEl.textContent = meta.print || meta.name || '';
+    const notesEl = $('#part-notes'); if (notesEl) notesEl.textContent = meta.notes || '';
   }
 
-  function loadLogs(pn){
-    jget(API+'/api/inventory/'+encodeURIComponent(pn)+'/logs')
-      .then(function(r){
-        var rows=(r.logs||[]).map(function(l){
-          return '<div class="ws-row"><span>'+l.ts+'</span><span>'+l.source+'</span><span>'+(l.delta>0?'+':'')+l.delta+'</span></div>';
-        }).join("");
-        $("logs").innerHTML='<div class="ws-label" style="margin-bottom:6px;">Recent Inventory Activity</div>'+rows;
-      }).catch(function(){});
-  }
+  const url = `${API_BASE}/api/inventory/${encodeURIComponent(pn)}`;
 
-  if(!pn){err("Missing pn"); return;}
-  jget(API+'/api/inventory').then(function(list){
-    var part=findRow(list,pn);
-    if(!part){err("404: part not in inventory"); return;}
-    render(part); loadLogs(part.pn);
-  }).catch(function(e){err("Load failed: "+e.message);});
+  fetch(url, { credentials: cred })
+    .then(r => (r.ok ? r.json() : Promise.reject({ status: r.status })))
+    .then(data => {
+      setStatus(''); // clear message
+
+      // Quantity
+      const qtyEl = $('#part-qty'); if (qtyEl) qtyEl.textContent = data.qty ?? 0;
+
+      // Last updated
+      const metaEl = $('#part-meta');
+      if (metaEl) {
+        metaEl.textContent = (data.updated_at || data.updated_by)
+          ? `Updated ${data.updated_at || ''}${data.updated_by ? ` by ${data.updated_by}` : ''}`
+          : '';
+      }
+
+      // History (optional)
+      const histEl = $('#part-history');
+      if (histEl && Array.isArray(data.history)) {
+        histEl.innerHTML = '';
+        data.history.forEach(row => {
+          const li = document.createElement('li');
+          const sign = row.change > 0 ? '+' : '';
+          li.textContent = `${row.ts || ''}   ${sign}${row.change} → ${row.qty_after}`;
+          histEl.appendChild(li);
+        });
+      }
+    })
+    .catch(err => {
+      if (err && err.status === 404) setStatus('404: part not in inventory', '#fa0');
+      else setStatus('Load failed. Open console for details.');
+      console.error('part load error', err);
+    });
 })();
